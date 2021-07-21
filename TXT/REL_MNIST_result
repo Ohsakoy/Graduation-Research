@@ -1,0 +1,50 @@
+RELを組み込み
+
+symmetric
+noise_rate = 0.2
+16
+Best Accuracy 98.81
+noise_rate = 0.4
+14
+Best Accuracy 98.26
+
+asymmetric
+noise_rate = 0.2
+65
+Best Accuracy 98.89
+noise_rate = 0.4
+37
+Best Accuracy 98.44
+
+instance
+noise_rate = 0.2
+13
+Best Accuracy 98.27
+noise_rate = 0.4
+17
+Best Accuracy 91.17
+REL
+
+symmetric
+noise_rate = 0.2
+8
+Best Accuracy 98.69
+noise_rate = 0.4
+24
+Best Accuracy 98.39
+
+asymmetric
+noise_rate = 0.2
+20
+noise_rate = 0.4
+Best Accuracy 99.01
+65
+Best Accuracy 97.67
+
+instance
+noise_rate = 0.2
+4
+Best Accuracy 98.38
+noise_rate = 0.4
+3
+Best Accuracy 94.69

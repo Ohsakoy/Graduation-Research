@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch
 
 # train set and val set split
-def dataset_split(train_images, train_labels, noise_type='symmetric', noise_rate=0.5, split_per=0.9, random_seed=1, num_classes=10):
+def dataset_split(train_images, train_labels, noise_type=None, noise_rate=0.5, split_per=0.9, random_seed=1, num_classes=10):
 
     clean_train_labels = train_labels[:, np.newaxis]
     if noise_type == 'symmetric':
