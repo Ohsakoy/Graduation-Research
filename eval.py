@@ -9,7 +9,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -20,7 +19,7 @@ class Evaluation_Method():
         self.data_num = 0.0
         
     def loss(self, loss):
-        self.total_loss += loss.item()
+        self.total_loss += float(loss.item() )
     
     def acc(self, labels, outputs):
         predicted = outputs.max(1, keepdim=True)[1]

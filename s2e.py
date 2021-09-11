@@ -18,6 +18,7 @@ from rel_method import CDE
 from rel_method import S2E
 from scipy.special import psi, polygamma
 from numpy.linalg.linalg import inv
+torch.autograd.set_detect_anomaly(True)
 
 MAX_NUM = 2
 num_classes = 10

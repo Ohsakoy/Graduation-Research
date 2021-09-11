@@ -10,6 +10,7 @@ import numpy as np
 import time
 import datetime
 import data_load
+import add_noise_split
 import tools
 from REL_model import LeNet
 from eval import Evaluation_Method
@@ -69,15 +70,20 @@ transform_test = transforms.Compose([
 ])
 
 if args.dataset == 'mnist':
+    transform_train = transform
+    transform_test = transform
     train_dataset = torchvision.datasets.MNIST("MNIST", train=True, download=True,
-                                                transform=transform, target_transform=tools.transform_target)
+                                            transform=transform_train, target_transform=tools.transform_target)
     test_dataset = torchvision.datasets.MNIST("MNIST", train=False, download=True,
-                                                transform=transform)
+                                            transform=transform_test)
+    
 elif args.dataset == 'fmnist':
+    transform_train = transform
+    transform_test = transform
     train_dataset = torchvision.datasets.FashionMNIST("FashionMNIST", train=True, download=True,
-                                                    transform=transform, target_transform=tools.transform_target)
+                                                    transform=transform_train, target_transform=tools.transform_target)
     test_dataset = torchvision.datasets.FashionMNIST("FashionMNIST", train=False, download=True,
-                                                    transform=transform)
+                                                    transform=transform_test)
 elif args.dataset == 'cifar10':
     batch_size = 64
     num_gradual = 20
@@ -122,51 +128,16 @@ criterion = nn.CrossEntropyLoss()
 for images, labels in train_loader:
     images = images.to(device)
 
+noise_train_dataset = add_noise_split.noise_dataset_split(images, labels, train=True,
+                                                        transform=transform_train, target_transform=tools.transform_target,
+                                                        noise_type=args.noise_type, noise_rate=args.noise_rate, dataset=args.dataset,
+                                                        split_per=0.9, random_seed=1, num_class=10)
 
-print(args.noise_type)
-assert(False)
-
-
-#train_noise
-if args.dataset == 'mnist':
-
-    noise_train_dataset = data_load.mnist_dataset(images, labels, train=True,
-                                                transform=transform, target_transform=tools.transform_target,
-                                                noise_type=args.noise_type, noise_rate=args.noise_rate, dataset=args.dataset,
-                                                split_per=0.9, random_seed=1, num_class=10)
-
-    #val_noise
-    noise_val_dataset = data_load.mnist_dataset(images, labels, train=False,
-                                                transform=transform, target_transform=tools.transform_target,
-                                                noise_type=args.noise_type, noise_rate=args.noise_rate, dataset=args.dataset,
-                                                split_per=0.9, random_seed=1, num_class=10)
-elif args.dataset == 'fmnist':
-    noise_train_dataset = data_load.fmnist_dataset(images, labels, train=True, transform=transform,
-                                                    target_transform=tools.transform_target, dataset=args.dataset,
-                                                    noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                    split_per=0.9, random_seed=1, num_class=10)
-    noise_val_dataset = data_load.fmnist_dataset(images, labels, train=False, transform=transform,
-                                                    target_transform=tools.transform_target, dataset=args.dataset,
-                                                    noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                    split_per=0.9, random_seed=1, num_class=10)
-elif args.dataset == 'cifar10':
-    noise_train_dataset = data_load.cifar10_dataset(images, labels, train=True, transform=transform_train,
-                                                    target_transform=tools.transform_target, dataset=args.dataset,
-                                                    noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                    split_per=0.9, random_seed=1, num_class=10)
-    noise_val_dataset = data_load.cifar10_dataset(images, labels, train=False, transform=transform_test,
-                                                target_transform=tools.transform_target, dataset=args.dataset,
-                                                noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                split_per=0.9, random_seed=1, num_class=10)
-elif args.dataset == 'cifar100':
-    noise_train_dataset = data_load.cifar100_dataset(images, labels, train=True, transform=transform_train,
-                                                    target_transform=tools.transform_target, dataset=args.dataset,
-                                                    noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                    split_per=0.9, random_seed=1, num_class=100)
-    noise_val_dataset = data_load.cifar100_dataset(images, labels, train=False, transform=transform_test,
-                                                    target_transform=tools.transform_target, dataset=args.dataset,
-                                                    noise_type=args.noise_type, noise_rate=args.noise_rate,
-                                                    split_per=0.9, random_seed=1, num_class=100)
+#val_noise
+noise_val_dataset = add_noise_split.noise_dataset_split(images, labels, train=False,
+                                                        transform=transform_test, target_transform=tools.transform_target,
+                                                        noise_type=args.noise_type, noise_rate=args.noise_rate, dataset=args.dataset,
+                                                        split_per=0.9, random_seed=1, num_class=10)
 
 
 noise_train_loader = torch.utils.data.DataLoader(
@@ -227,7 +198,6 @@ def val(val_loader):
     return val_loss
 
 
-
 weights = [1] * len(noise_train_dataset)
 weights = torch.FloatTensor(weights)
 
@@ -237,7 +207,7 @@ for epoch in range(EPOCH):
     if args.method == 'CDE':
         cde = CDE()
         train_loss, train_acc = cde.train_rel(clf, device, noise_train_loader, epoch, args.noise_rate,
-                                            num_gradual, criterion, optimizer)
+                                                num_gradual, criterion, optimizer)
     elif args.method == 'CRUST':
         crust = CRUST()
         if use_crust and epoch >= 5:
@@ -286,21 +256,19 @@ for epoch in range(EPOCH):
     test_loss, test_acc = test(test_loader)
 
     print('epoch %d, train_loss: %f train_acc: %f test_loss: %f test_acc: %f' %
-        (epoch+1, train_loss, train_acc, test_loss, test_acc))
+            (epoch+1, train_loss, train_acc, test_loss, test_acc))
     TrainLoss[epoch] = train_loss
     TrainAccuracy[epoch] = train_acc
     TestLoss[epoch] = test_loss
     TestAccuracy[epoch] = test_acc
     ValidationLoss[epoch] = val_loss
     end = time.time() - start
-    print(end)
 
 id = np.argmin(ValidationLoss)
 test_acc_max = TestAccuracy[id]
 print('Best Accuracy', test_acc_max)
 
 
-
-np.savez('CDE_MNIST_Result/{}_noise_result'.format(noise_type), train_loss_result=TrainLoss,
-         train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
-         test_acc_result=TestAccuracy, val_loss_result=ValidationLoss)
+np.savez('FMNIST_Result/{me}_{nt}_{nr}_result'.format(me=args.method, nt=args.noise_type, nr=args.noise_rate), train_loss_result=TrainLoss,
+        train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
+        test_acc_result=TestAccuracy, val_loss_result=ValidationLoss)

@@ -12,19 +12,42 @@ import torch.nn as nn
 import torch
 
 # train set and val set split
-def dataset_split(train_images, train_labels, noise_type=None, noise_rate=0.5, split_per=0.9, random_seed=1, num_classes=10):
+def dataset_split(train_images, train_labels, dataset='mnist', noise_type=None, noise_rate=0.5, split_per=0.9, random_seed=1, num_classes=10):
 
     clean_train_labels = train_labels[:, np.newaxis]
     if noise_type == 'symmetric':
         noisy_labels = utils.noisify_multiclass_symmetric(
             clean_train_labels, noise_rate, random_seed, num_classes)
     elif noise_type == 'asymmetric':
-        noisy_labels = utils.noisify_multiclass_asymmetric(
-            clean_train_labels, noise_rate, random_seed, num_classes)
+        if dataset == 'mnist':
+            noisy_labels = utils.noisify_multiclass_asymmetric(
+                clean_train_labels, noise_rate, random_seed, num_classes)
+        elif dataset == 'fmnist':
+            noisy_labels = utils.noisify_multiclass_asymmetric_fmnist(
+                clean_train_labels, noise_rate, random_seed, num_classes)
+        elif dataset == 'cifar10':
+            noisy_labels = utils.noisify_multiclass_asymmetric_cifar10(
+                clean_train_labels, noise_rate, random_seed, num_classes)
+        elif dataset == 'cifar100':
+            noisy_labels = utils.noisify_multiclass_asymmetric_cifar100(
+                clean_train_labels, noise_rate, random_seed, num_classes)
     else :
-        dataset = zip(train_images, train_labels)
-        noisy_labels = utils.get_instance_noisy_label(
-            n=noise_rate, dataset=dataset, labels = train_labels, num_classes=10, feature_size=784, norm_std=0.1, seed=random_seed)
+        if dataset == 'mnist':
+            dataset = zip(train_images, train_labels)
+            noisy_labels = utils.get_instance_noisy_label(
+                n=noise_rate, dataset=dataset, labels = train_labels, num_classes=10, feature_size=784, norm_std=0.1, seed=random_seed)
+        elif dataset == 'fmnist':
+            dataset = zip(train_images, train_labels)
+            noisy_labels = utils.get_instance_noisy_label(
+                n=noise_rate, dataset=dataset, labels=train_labels, num_classes=10, feature_size=784, norm_std=0.1, seed=random_seed)
+        elif dataset == 'cifar10':
+            dataset = zip(train_images, train_labels)
+            noisy_labels = utils.get_instance_noisy_label(
+                n=noise_rate, dataset=dataset, labels=train_labels, num_classes=10, feature_size=3072, norm_std=0.1, seed=random_seed)
+        elif dataset == 'cifar100':
+            dataset = zip(train_images, train_labels)
+            noisy_labels = utils.get_instance_noisy_label(
+                n=noise_rate, dataset=dataset, labels=train_labels, num_classes=100, feature_size=3072, norm_std=0.1, seed=random_seed)
     
     noisy_labels = noisy_labels.squeeze()
     num_samples = int(noisy_labels.shape[0])

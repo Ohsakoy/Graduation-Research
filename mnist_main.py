@@ -61,7 +61,7 @@ test_loader = torch.utils.data.DataLoader(
 
 
 for num in range(MAX_NUM):
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     clf = LeNet()
     clf = clf.to(device)
     optimizer = torch.optim.SGD(
@@ -158,11 +158,11 @@ for num in range(MAX_NUM):
     end = time.time() - start
     print(end)
 
-
+'''
 np.savez('CDE_MNIST_Result/{}_noise_result'.format(noise_type), train_loss_result=TrainLoss,
         train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
         test_acc_result=TestAccuracy, val_loss_result=ValidationLoss)
-'''
+
 np.savez('MY_REL_Result/{}_noise_result'.format(noise_type), train_loss_result=TrainLoss,
         train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
         test_acc_result=TestAccuracy,val_loss_result=ValidationLoss)
