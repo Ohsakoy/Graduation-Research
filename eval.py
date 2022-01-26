@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import StepLR
 import numpy as np
 
 
-class Evaluation_Method():
+class Evaluation():
     def __init__(self):
         self.total_loss = 0.0
         self.correct_predicted_num = 0.0

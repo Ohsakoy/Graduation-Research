@@ -12,6 +12,79 @@ import numpy as np
 import torch.nn.functional as F
 from numpy.testing import assert_array_almost_equal
 
+def noise_island_linear(X, y, noise, param_x, param_y):
+    X = X.numpy()
+    y = y.numpy()
+    point = np.where((param_x-3 < X[:, 0]) & (X[:, 0] < param_x)
+                    & (param_y < X[:, 1]) & (X[:, 1] < param_y+2.2))[0]
+
+    
+    base_point = point[np.where(X[point][:, 0] == np.min(X[point][:, 0]))[0]]
+    #print(X[base_point])
+    dist = np.empty((len(point), 2))
+    for i, p in enumerate(point):
+        d = np.linalg.norm(X[base_point]-X[p])
+        dist[i][0] = p
+        dist[i][1] = d
+
+    sort_point = dist[np.argsort(dist[:, 1])][:, 0].astype('int')
+    #print(sort_point)
+    noise_point = sort_point[0:int(len(X)*noise)]
+    print(noise_point.shape)
+
+    y[noise_point] = y[noise_point] ^ 1
+    
+    return y
+
+
+def noise_island_circle(X, y, noise):
+    X = X.numpy()
+    y = y.numpy()
+    
+    point_1 = np.where((-2.7 < X[:, 0]) & (X[:, 0] < 2.0)
+                    & (1.5 < X[:, 1]) & (X[:, 1] < 2.7))[0]
+    point_2 = np.where((-2.7 < X[:, 0]) & (X[:, 0] < -1.4)
+                    & (-2.0 < X[:, 1]) & (X[:, 1] < 1.5))[0]
+    point = np.append(point_1, point_2)
+    
+    base_point = point_1[np.where(X[point_1][:, 0] == np.min(X[point_1][:, 0]))[0]]
+
+    dist = np.empty((len(point), 2))
+    print(point.shape)
+    for i, p in enumerate(point):
+        d = np.linalg.norm(X[base_point]-X[p])
+        dist[i][0] = p
+        dist[i][1] = d
+        
+
+    
+    sort_point = dist[np.argsort(dist[:, 1])][:, 0].astype('int')
+    #print(sort_point)
+    noise_point = sort_point[0:int(len(X)*noise)]
+    #print(noise_point)
+    #print(noise_point.shape)
+    
+    y[noise_point] = y[noise_point] ^ 1
+    
+    return y, noise_point
+
+def noise_asymmetric_linear(y, noise):
+    y = y.numpy()
+    point = np.where(y==1)[0]
+    
+    noise_point = np.random.choice(point, int(len(y)*noise))
+    y[noise_point] = y[noise_point] ^ 1
+    
+    return  y
+
+def noise_asymmetric_nonlinear(y, noise):
+    y = y.numpy()
+    point = np.where(y == 0)[0]
+
+    noise_point = np.random.choice(point, int(len(y)*noise))
+    y[noise_point] = y[noise_point] ^ 1
+
+    return y
 
 def multiclass_noisify(y, P, random_state=1):
     assert P.shape[0] == P.shape[1]
@@ -160,7 +233,7 @@ def noisify_multiclass_asymmetric_cifar100(y_train, noise, random_state=None, nb
         targets = y_train_noisy
     return targets
 
-def get_instance_noisy_label(n, dataset, labels, num_classes, feature_size, norm_std, seed):
+def get_instance_noisy_label(noise_rate, dataset, labels, num_classes, feature_size, norm_std, seed):
     
     label_num = num_classes
     np.random.seed(int(seed))
@@ -169,7 +242,7 @@ def get_instance_noisy_label(n, dataset, labels, num_classes, feature_size, norm
 
     P = []
     flip_distribution = stats.truncnorm(
-        (0 - n) / norm_std, (1 - n) / norm_std, loc=n, scale=norm_std)
+        (0 - noise_rate) / norm_std, (1 - noise_rate) / norm_std, loc=noise_rate, scale=norm_std)
     flip_rate = flip_distribution.rvs(labels.shape[0])
 
     if isinstance(labels, list):
@@ -190,10 +263,10 @@ def get_instance_noisy_label(n, dataset, labels, num_classes, feature_size, norm
     #np.save("transition_matrix.npy", P)
     
     l = [i for i in range(label_num)]
-    new_label = [np.random.choice(l, p=P[i]) for i in range(labels.shape[0])]
+    new_labels = [np.random.choice(l, p=P[i]) for i in range(labels.shape[0])]
     record = [[0 for _ in range(label_num)] for i in range(label_num)]
 
-    for a, b in zip(labels, new_label):
+    for a, b in zip(labels, new_labels):
         a, b = int(a), int(b)
         record[a][b] += 1
         
@@ -205,4 +278,4 @@ def get_instance_noisy_label(n, dataset, labels, num_classes, feature_size, norm
             cnt += 1
         if cnt >= 10:
             break
-    return np.array(new_label)
+    return np.array(new_labels)

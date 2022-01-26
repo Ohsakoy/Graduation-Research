@@ -1,4 +1,5 @@
 from __future__ import print_function
+import torchxrayvision as xrv
 import math
 import torch
 import torch.nn as nn
@@ -31,7 +32,7 @@ class LeNet(nn.Module):
         out = self.linear(feats)
         return out, feats
         '''
-        return out, feats
+        return out
 
 class Logistic(nn.Module):
     def __init__(self):
@@ -43,6 +44,71 @@ class Logistic(nn.Module):
         
         return x, True
 
+class NeuralNetLinear(nn.Module):
+    def __init__(self):
+        super(NeuralNetLinear, self).__init__()
+        self.fc1 = nn.Linear(2,256)
+        self.fc2 = nn.Linear(256, 256)
+        self.fc3 = nn.Linear(256, 256)
+        
+        self.linear = nn.Linear(256,2)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+
+        x = self.linear(x)
+        
+        return x
+
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__()
+        self.fc1 = nn.Linear(2, 1024)
+        self.fc2 = nn.Linear(1024, 1024)
+        self.fc3 = nn.Linear(1024, 1024)
+        #self.fc4 = nn.Linear(1024, 1024)
+        #self.fc5 = nn.Linear(128, 128)
+        self.linear = nn.Linear(1024,2)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        #x = F.relu(self.fc4(x))
+        #x = F.relu(self.fc5(x))
+        x = self.linear(x)
+        
+        return x
+
+
+
+class LeNet_Covid(nn.Module):
+    def __init__(self):
+        super(LeNet_Covid, self).__init__()
+        self.conv1 = nn.Conv2d(3, 32, 3, stride=1, padding=21)
+        self.conv2 = nn.Conv2d(32, 16, 5)
+        self.fc1 = nn.Linear(400, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        out = F.relu(self.conv1(x))
+        out = F.max_pool2d(out, 2)
+        out = F.relu(self.conv2(out))
+        out = F.max_pool2d(out, 2)
+        out = out.view(out.size(0), -1)
+        out = F.relu(self.fc1(out))
+        feats = F.relu(self.fc2(out))
+        out = self.fc3(feats)
+
+        '''
+        feats = out.view(out.size(0), -1)
+        out = self.linear(feats)
+        return out, feats
+        '''
+        return out, feats
 class Bottleneck(nn.Module):
     expansion = 4
 

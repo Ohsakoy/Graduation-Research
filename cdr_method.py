@@ -30,16 +30,19 @@ class CDR():
 
     def train_one_step(self, clf, images, labels, nonzero_ratio, clip, criterion, optimizer):
         clf.train()
-        pred, _ = clf(images)
+        pred = clf(images)
         loss = criterion(pred, labels)
         loss.backward()
 
         to_concat_g = []
         to_concat_v = []
+        
+        
         for name, param in clf.named_parameters():
             if param.dim() in [2, 4]:
                 to_concat_g.append(param.grad.data.view(-1))
                 to_concat_v.append(param.data.view(-1))
+                
         all_g = torch.cat(to_concat_g)
         all_v = torch.cat(to_concat_v)
         metric = torch.abs(all_g * all_v)

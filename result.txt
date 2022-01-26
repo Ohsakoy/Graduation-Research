@@ -1,0 +1,16 @@
+0.395
+0.655
+
+git add .
+git commit - m 'update'
+git push origin
+ source ~/pythonEnvironments/REL/bin/activate
+
+
+
+Best Accuracy 0.6748768472906403
+Best_num:  331
+
+           0.0                         0.1
+resnet20 & $ 0.6527 \pm 0.0696 $  & $ 0.6502 \pm 0.0457 $ \\
+resnet32                         & $ 0.6379 \pm 0.0482 $ \\
