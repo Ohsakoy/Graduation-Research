@@ -12,6 +12,8 @@ import numpy as np
 import torch.nn.functional as F
 from numpy.testing import assert_array_almost_equal
 
+#ノイズ処理
+
 def noise_island_linear(X, y, noise, param_x, param_y):
     X = X.numpy()
     y = y.numpy()
@@ -30,11 +32,11 @@ def noise_island_linear(X, y, noise, param_x, param_y):
     sort_point = dist[np.argsort(dist[:, 1])][:, 0].astype('int')
     #print(sort_point)
     noise_point = sort_point[0:int(len(X)*noise)]
-    print(noise_point.shape)
+    #print(noise_point.shape)
 
     y[noise_point] = y[noise_point] ^ 1
     
-    return y
+    return y, noise_point
 
 
 def noise_island_circle(X, y, noise):
@@ -50,7 +52,7 @@ def noise_island_circle(X, y, noise):
     base_point = point_1[np.where(X[point_1][:, 0] == np.min(X[point_1][:, 0]))[0]]
 
     dist = np.empty((len(point), 2))
-    print(point.shape)
+    #print(point.shape)
     for i, p in enumerate(point):
         d = np.linalg.norm(X[base_point]-X[p])
         dist[i][0] = p
@@ -72,20 +74,33 @@ def noise_asymmetric_linear(y, noise):
     y = y.numpy()
     point = np.where(y==1)[0]
     
-    noise_point = np.random.choice(point, int(len(y)*noise))
+    noise_point = np.random.choice(point, int(len(y)*noise), replace=False)
     y[noise_point] = y[noise_point] ^ 1
-    
-    return  y
+    #print(y[noise_point])
+    return  y, noise_point
 
 def noise_asymmetric_nonlinear(y, noise):
+    cop = y.numpy().copy()
     y = y.numpy()
     point = np.where(y == 0)[0]
 
-    noise_point = np.random.choice(point, int(len(y)*noise))
+    noise_point = np.random.choice(point, int(len(y)*noise),replace=False)
     y[noise_point] = y[noise_point] ^ 1
 
-    return y
+    return y, noise_point
 
+def noise_asymmetric_covid(y, noise):
+    y = y.numpy()
+    #print(y.shape)
+    point = np.where(y == 0)[0]
+    
+    noise_point = np.random.choice(point, int(len(y)*noise),replace=False)
+    y[noise_point] = y[noise_point] ^ 1
+    #print(noise_point.shape)
+
+    return y, noise_point
+
+#以下のコード 全てCDR
 def multiclass_noisify(y, P, random_state=1):
     assert P.shape[0] == P.shape[1]
     assert np.max(y) < P.shape[0]
@@ -125,6 +140,8 @@ def noisify_multiclass_symmetric(y_train, noise, random_state, nb_classes):
         y_train_noisy = multiclass_noisify(
             np.array(y_train), P=P, random_state=random_state)
         actual_noise = (y_train_noisy != np.array(y_train)).mean()
+
+        #print(np.where(y_train_noisy != np.array(y_train))[0].shape)
         assert actual_noise > 0.0
         return y_train_noisy
     else:

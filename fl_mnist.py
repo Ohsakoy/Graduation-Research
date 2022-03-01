@@ -1,6 +1,6 @@
 import numpy as np
 
-
+#crust
 class FacilityLocationMNIST:
     
     def __init__(self, V, D=None, fnpy=None):

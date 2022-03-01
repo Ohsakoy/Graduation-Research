@@ -1,3 +1,5 @@
 {
-    "python.pythonPath": "/home/oosako/local_intel/bin/python"
+    "python.pythonPath": "/home/oosako/local_intel/bin/python",
+    "cloudlatex.projectId": 3,
+    "cloudlatex.autoCompile": false
 }

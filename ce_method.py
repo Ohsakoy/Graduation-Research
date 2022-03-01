@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 from torch.autograd import grad
 from eval import Evaluation
-
+import plot
 import seaborn as sns
 import matplotlib.pyplot as plt
 class CE():
@@ -37,3 +37,4 @@ class CE():
         # plt.savefig("Plot/CE_label.png")
         # assert(False)
         return train_loss, train_acc
+

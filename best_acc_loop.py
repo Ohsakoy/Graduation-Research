@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
-from sklearn.metrics import pairwise_distances
+from sklearn.metrics import pairwise_distances #crust
 import numpy as np
 import time
 from noisy_dataset import NoisyDataset
@@ -19,11 +19,14 @@ from ce_method import CE
 from trimming_method import Trimming
 import eval_on_holdout
 import plot
-from lazyGreedy import lazy_greedy_heap
-from fl_mnist import FacilityLocationMNIST
+from lazyGreedy import lazy_greedy_heap #crust
+from fl_mnist import FacilityLocationMNIST#crust
 import REL_model
-import models
+import models #crust
 from covid_ct_dataset import CovidCTDataset
+
+np.random.seed(3523421)
+torch.manual_seed(3523421)
 
 model_names = sorted(name for name in models.__dict__
                     if name.islower() and not name.startswith("__")
@@ -43,7 +46,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--start-epoch', default=0, type=int,
                     metavar='N', help='manual epoch number (useful on restarts)')
-parser.add_argument('--epoch', type=int, default=3000)
+parser.add_argument('--epoch', type=int, default=1000)
 parser.add_argument('--model_name', type=str, default='resnet50')
 parser.add_argument('--weight_decay', type=float, help='l2', default=0.01)
 parser.add_argument('--learning_rate', type=float,
@@ -82,10 +85,6 @@ test_transformer_covid = transforms.Compose([
 ])
 
 best_acc = np.zeros(3)
-best_val = np.zeros(3)
-last_train_loss = np.zeros(3)
-last_train_acc = np.zeros(3)
-last_test_acc = np.zeros(3)
 for i in range(3):
     train_images = torch.load('{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
         d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
@@ -149,7 +148,7 @@ for i in range(3):
         test_dataset = torch.utils.data.TensorDataset(test_images, test_labels)
     elif args.dataset == 'covid_ct':
         num_classes = 2
-        batch_size = 32
+        batch_size = 16
         num_gradual_cdr = 2
         test_dataset = CovidCTDataset(root_dir='new_data/CT_image',
                                         txt_COVID='new_data/Covid_txt/testCT_COVID.txt',
@@ -188,28 +187,11 @@ for i in range(3):
         model = NeuralNetwork()
         #model = Logistic()
     elif args.dataset == 'covid_ct':
-        if args.model_name == 'dnet169':
-            model = torchvision.models.densenet169(pretrained=True)
-        elif args.model_name == 'dnet121':
-            model = torchvision.models.densenet121(pretrained=True)
-        elif args.model_name == 'resnet18':
-            model = torchvision.models.resnet18(pretrained=True)
-        elif args.model_name == 'resnet50':
-            model = torchvision.models.resnet50(pretrained=True)#models.resnet50(pretrained=True)
+        model = torchvision.models.resnet50(pretrained=True)#models.resnet50(pretrained=True)
 
     model = model.to(device)
     #optimizer 
-    if args.dataset == 'covid_ct':
-        if args.optim == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-        elif args.optim == 'sgd':
-            optimizer = torch.optim.SGD(
-                model.parameters(), lr=0.001, momentum=0.9)
-        elif args.optim == 'sgd_w':
-            optimizer = torch.optim.SGD(model.parameters(), lr=0.001,
-                            weight_decay=args.weight_decay, momentum=0.9)
-    else:
-        optimizer = torch.optim.SGD(
+    optimizer = torch.optim.SGD(
             model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
     
     criterion = nn.CrossEntropyLoss()
@@ -223,6 +205,8 @@ for i in range(3):
             optimizer, milestones=[80, 100], last_epoch=args.start_epoch - 1)
         weights = [1] * len(noise_train_dataset)
         weights = torch.FloatTensor(weights)
+    elif args.method == 'Trimming':
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
     TrainLoss = np.zeros(args.epoch)
     TrainAccuracy = np.zeros(args.epoch)
@@ -233,10 +217,15 @@ for i in range(3):
 
     start = time.time()
     for epoch in range(args.start_epoch, args.epoch):
+        st = time.time()
         if args.method == 'CDR':
             cdr = CDR()
             train_loss, train_acc = cdr.train_rel(model, device, noise_train_loader, epoch, args.noise_rate,
                                                 num_gradual_cdr, criterion, optimizer)
+        elif args.method == 'CE':
+            ce = CE()
+            train_loss, train_acc = ce.train(
+                noise_train_loader, model, device, criterion, optimizer)
         elif args.method == 'CRUST':
             crust = CRUST()
             if epoch >= 5:
@@ -271,12 +260,12 @@ for i in range(3):
             else:
                 train_loss, train_acc = crust.train_crust(
                     noise_train_loader, model, device, criterion, weights, optimizer, fetch=False)
-        elif args.method == 'CE':
-            ce = CE()
-            train_loss, train_acc = ce.train(
-                noise_train_loader, model, device, criterion, optimizer)
 
         elif args.method == 'Trimming':
+            trimming = Trimming()
+            train_loss, train_acc = trimming.train_batch(
+                    train_and_val_loader, model, device, optimizer, args.outlier_ratio)
+        elif args.method == 'Trimming_change':
             trimming = Trimming()
             if epoch >= 300:
                 args.outlier_ratio = 0.2
@@ -285,16 +274,20 @@ for i in range(3):
             elif epoch >= 100:
                 args.outlier_ratio = 0.05
             else:
-                args.outlier_ratio = 0.01
-            
-            #print('outlier:',args.outlier_ratio)
+                args.outlier_ratio = 0.01 
+            print('outlier:',args.outlier_ratio)
             train_loss, train_acc = trimming.train_batch(
-                    train_and_val_loader, model, device, optimizer, args.outlier_ratio)
+                train_and_val_loader, model, device, optimizer, args.outlier_ratio)
         elif args.method == 'Trimming_minibatch':
             trimming = Trimming()
-            train_loss, train_acc = trimming.train_minibatch(
-                train_and_val_images, train_and_val_labels, model, device, optimizer, args.outlier_ratio, 32)
-        if args.method == 'CRUST':
+            if args.dataset == 'covid_ct':
+                train_loss, train_acc = trimming.train_minibatch_covid(
+                    train_and_val_images, train_and_val_labels, model, device, optimizer, args.outlier_ratio, 16)
+            else:
+                train_loss, train_acc = trimming.train_minibatch(
+                    train_and_val_images, train_and_val_labels, model, device, optimizer, args.outlier_ratio, 32)
+
+        if args.method == 'Trimming' or args.method == 'Trimming_minibatch'or args.method == 'Trimming_change':
             val_loss = np.NAN
         else:
             val_loss, val_acc = eval_on_holdout.eval_on_holdout_data(
@@ -302,17 +295,9 @@ for i in range(3):
         test_loss, test_acc = eval_on_holdout.eval_on_holdout_data(
             test_loader, model, device, criterion)
 
-        if args.method == 'CRUST' or args.method == 'Trimming':
-            val_loss = np.NAN
-        else:
-            val_loss, val_acc = eval_on_holdout.eval_on_holdout_data(
-                noise_val_loader, model, device, criterion)
-        test_loss, test_acc = eval_on_holdout.eval_on_holdout_data(
-            test_loader, model, device, criterion)
-
-        outlier_detection_accuracy = eval_on_holdout.eval_outlier_detection(
+        outlier_detection_accuracy, _ = eval_on_holdout.eval_outlier_detection(
             train_and_val_images, train_and_val_labels, train_and_val_labels_without_noise, model, device)
-        if args.method == 'Trimming':
+        if args.method == 'Trimming' or args.method == 'Trimming_minibatch'or args.method == 'Trimming_change':
             print('epoch %d, train_loss: %.8f train_acc: %f test_loss: %f test_acc: %f' %
                 (epoch+1, train_loss, train_acc, test_loss, test_acc))
         else:
@@ -328,39 +313,26 @@ for i in range(3):
             
         if args.method == 'CDR' or args.method == 'CRUST':
             lr_scheduler.step()
+        e = time.time() - st
+        print(e)
     end = time.time() - start
 
 
-    if args.method == 'CRUST':
-        test_acc_max = TestAccuracy[args.epoch-1]
-    elif args.method == 'Trimming':
+    if args.method == 'Trimming' or args.method == 'Trimming_minibatch'or args.method == 'Trimming_change':
         test_acc_max = OutlierDetectionAccuracy[np.argmin(TrainLoss)]
         #test_acc_max = test_acc
     else:
-        test_acc_max = TestAccuracy[np.argmin(ValidationLoss)]
-        #test_acc_max = OutlierDetectionAccuracy[np.argmin(ValidationLoss)]
+        #test_acc_max = TestAccuracy[np.argmin(ValidationLoss)]
+        test_acc_max = OutlierDetectionAccuracy[np.argmin(ValidationLoss)]
     print('Best Accuracy', test_acc_max)
     print(end)
     best_acc[i] = test_acc_max
 
-    # np.savez('{d}_result/{me}_{nt}_{nr}_result_{n}'.format(d=args.dataset, me=args.method,
-    #                                                 nt=args.noise_type, nr=args.noise_rate,n=i), train_loss_result=TrainLoss,
-    #         train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
-    #         test_acc_result=TestAccuracy, val_loss_result=ValidationLoss,
-    #         outlier_detection_accuracy=OutlierDetectionAccuracy)
-    np.savez('{d}_result/{model}_{optim}_result_{n}'.format(
-            d=args.dataset, model=args.model_name, optim=args.optim, n=i),
-            train_loss_result=TrainLoss,
+    np.savez('{d}_result/{me}_{nt}_{nr}_result_{n}'.format(d=args.dataset, me=args.method,
+                                                    nt=args.noise_type, nr=args.noise_rate,n=i), train_loss_result=TrainLoss,
             train_acc_result=TrainAccuracy, test_loss_result=TestLoss,
             test_acc_result=TestAccuracy, val_loss_result=ValidationLoss,
             outlier_detection_accuracy=OutlierDetectionAccuracy)
 
-
-#np.save('best_acc_trimming_change/{nt}_{nr}_{m}_result'.format(
-#    d=args.dataset, nt=args.noise_type, m=args.method, nr=args.noise_rate), best_acc)
-    
-# np.save('best_acc_{d}/{nt}_{a}_{nr}_{m}_result'.format(
-#     a=args.arch, d=args.dataset, nt=args.noise_type, m=args.method, nr=args.noise_rate), best_acc)
-
-np.save('best_acc_{d}/{model}_{optim}_result'.format(
-    d=args.dataset,model=args.model_name, optim=args.optim), best_acc)
+np.save('best_acc_{d}/{nt}_{nr}_{m}_result'.format(
+    d=args.dataset, nt=args.noise_type, m=args.method, nr=args.noise_rate), best_acc)

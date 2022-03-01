@@ -171,7 +171,7 @@ class ResNet(nn.Module):
         out = self.avgpool(out)
         feats = out.view(out.size(0), -1)
         out = self.linear(feats)
-        return out, feats
+        return out
 
 
 def ResNet50(input_channel, num_classes):

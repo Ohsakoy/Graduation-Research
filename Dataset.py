@@ -8,39 +8,21 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from add_noise_split_crust import Noise_dataset_split_crust
 import tools
-import utils
-import models
 import plot
 from covid_ct_dataset import CovidCTDataset
 
 
-model_names = sorted(name for name in models.__dict__
-                     if name.islower() and not name.startswith("__")
-                     and callable(models.__dict__[name]))
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet32',
-                    choices=model_names,
-                    help='model architecture: ' +
-                    ' | '.join(model_names) +
-                    ' (default: resnet32)')
+
 parser.add_argument('--noise_rate', type=float,
                     help='overall corruption rate, should be less than 1', default=0.5)
 parser.add_argument('--noise_type', type=str,
                     help='[instance, symmetric, asymmetric]', default='symmetric')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
-parser.add_argument('--start-epoch', default=0, type=int,
-                    metavar='N', help='manual epoch number (useful on restarts)')
-parser.add_argument('--epoch', type=int, default=100)
-parser.add_argument('--model', type=str, default='LeNet')
-parser.add_argument('--weight_decay', type=float, help='l2', default=0.01)
-parser.add_argument('--learning_rate', type=float,
-                    help='momentum', default=0.01)
 parser.add_argument('--momentum', type=float, help='momentum', default=0.9)
 parser.add_argument('--dataset', type=str, default='mnist')
 parser.add_argument('--method', type=str, default='CDR')
-parser.add_argument('--inlier_ratio', type=float, default=0.8)
+
 args = parser.parse_args()
 
 #device = torch.device("cpu")
@@ -149,39 +131,21 @@ train_loader = torch.utils.data.DataLoader(
 for images, labels in train_loader:
     images_train = images  # .to(device)
     labels_train = labels
-    #print(images.shape)
+print(images_train.shape)
+print(labels_train.shape)
 
 train_images, val_images, train_labels, val_labels, train_and_val_images, train_and_val_labels, train_and_val_labels_without_noise = tools.dataset_split(
     images_train, labels_train, args.dataset, args.noise_type, args.noise_rate, SPLIT_TRAIN_VAL_RATIO, random_seed=1, num_classes=num_classes)
 
 # plot.save_fig(train_and_val_images, train_and_val_labels,
 #             train_and_val_images, train_and_val_labels_without_noise)
-
-#data loader)
-# if args.method != 'CRUST':
-#     SPLIT_TRAIN_VAL_RATIO = 0.9
-#     train_loader = torch.utils.data.DataLoader(
-#         train_dataset, batch_size=len(train_dataset), drop_last=False, shuffle=True)
-#     for images, labels in train_loader:
-#         images_train = images  # .to(device)
-#         labels_train = labels
-    
-#     train_images, val_images, train_labels, val_labels, train_and_val_images, train_and_val_labels, train_and_val_labels_without_noise = tools.dataset_split(
-#         images_train, labels_train, args.dataset, args.noise_type, args.noise_rate, SPLIT_TRAIN_VAL_RATIO, random_seed=1, num_classes=num_classes)
-    
-#     # plot.save_fig(train_and_val_images, train_and_val_labels,
-#     #               train_and_val_images, train_and_val_labels_without_noise)
-
-# elif args.method == 'CRUST':
-#     SPLIT_TRAIN_VAL_RATIO = 1.0
-#     r_crust = 2.0
-#     fl_ratio_crust = 0.5
-#     noise_train_dataset = Noise_dataset_split_crust(train_dataset.data, train_dataset.targets, train=True,
-#                                                     transform=transform_train, target_transform=tools.transform_target,
-#                                                     noise_type=args.noise_type, noise_rate=args.noise_rate, dataset=args.dataset,
-#                                                     split_per=SPLIT_TRAIN_VAL_RATIO, random_seed=1, num_class=num_classes)
-#     trainval_loader = torch.utils.data.DataLoader(
-#         noise_train_dataset, batch_size=batch_size, drop_last=False, shuffle=False, num_workers=args.workers, pin_memory=True)
+print(train_and_val_images.shape, train_and_val_labels.shape)
+plot.t_sne(train_and_val_images, train_and_val_labels)
+assert False
+# outlier_id = np.where(train_and_val_labels !=
+#                         train_and_val_labels_without_noise)[0]
+# print(train_and_val_labels.shape)
+# print(outlier_id.shape)
 
 
 #image 保存　tensor

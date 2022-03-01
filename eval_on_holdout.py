@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
+import plot
 
 
 def eval_on_holdout_data(loader, model, device, criterion):
@@ -37,6 +38,8 @@ def eval_outlier_detection(train_and_val_images, train_and_val_labels, train_and
         images = train_and_val_images.to(device)
         labels = torch.LongTensor(train_and_val_labels).to(device)
         outputs = model.forward(images)
+        # plot.t_sne(outputs, labels)
+        # assert False
         #outputs, _ = model.forward(images)
         _, pred = torch.max(outputs, 1)
 
@@ -45,7 +48,7 @@ def eval_outlier_detection(train_and_val_images, train_and_val_labels, train_and
         negLogProbs = - outputs[torch.arange(n_batch), labels] + torch.logsumexp(outputs, dim=1)
         _, idx = torch.sort(negLogProbs, descending=True)
         pred_outlier = idx[0: int(num_outliers)].to('cpu').detach().numpy()
-        #print(pre_outlier)
+        #print(pred_outlier.shape)
         for i in pred_outlier:
             if np.any(outlier_id == i) :
                 num = num + 1

@@ -1,5 +1,5 @@
 import heapq
-
+# crust
 
 def _heappush_max(heap, item):
     heap.append(item)
