@@ -1,7 +1,4 @@
-from tracemalloc import stop
 import torch
-import torch.nn.functional as F
-import numpy as np
 from torch.autograd import grad
 from eval import Evaluation
 
@@ -43,36 +40,6 @@ class Trimming():
         
         return train_loss, train_acc
 
-    def train_batch_debug(self, train_and_val_loader, model, device,  optimizer, outlier_ratio):
-        model.train()
-        eval_method = Evaluation()
-        for i, batch in enumerate(train_and_val_loader):
-            images = batch[0]
-            labels = batch[1]
-            images = images.to(device)
-            labels = labels.to(device)
-            optimizer.zero_grad()
-
-            outputs = model.forward(images)
-            n_batch = labels.size(0)
-
-            #負の対数尤度
-            negLogProbs = - outputs[torch.arange(n_batch), labels] + torch.logsumexp(outputs, dim=1)
-            sorted_negLogProbs, idx = torch.sort(negLogProbs, descending=False)
-            #ソートしたものの尤度が低い80%
-            trimmed = sorted_negLogProbs[0: -int(n_batch * outlier_ratio)]
-
-            #trim_id = idx[0: int(n_batch * outlier_ratio)]
-            #trim_id = idx[0: -int(n_batch * outlier_ratio)]
-            loss = torch.mean(trimmed)
-
-            eval_method.loss(loss)
-            eval_method.acc(labels, outputs)
-            loss.backward()
-            optimizer.step()
-        train_loss, train_acc = eval_method.get_result()
-
-        return train_loss, train_acc
     
     
     @staticmethod

@@ -54,7 +54,7 @@ parser.add_argument('--outlier_ratio', type=float, default=0.2)
 args = parser.parse_args()
 
 #device = torch.device("cpu")
-
+DATA_FOLDER = 'all_data_folder'
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 transform = transforms.Compose([transforms.ToTensor(),
@@ -78,14 +78,15 @@ test_transformer_covid = transforms.Compose([
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-train_images = torch.load('{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
+
+train_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
-val_images = torch.load('{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
+val_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
-train_and_val_images = torch.load('{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
+train_and_val_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
 
-labels = np.load('{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
+labels = np.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
 train_labels = labels['train_labels']
 val_labels = labels['val_labels']
@@ -129,16 +130,16 @@ elif args.dataset == 'linear' or args.dataset == 'nonlinear':
     num_classes = 2
     num_gradual_cdr = 2
     batch_size = len(noise_train_dataset)
-    test_images = torch.load('{d}_data/test_images.pt'.format(d=args.dataset))
-    test_labels = torch.load('{d}_data/test_labels.pt'.format(d=args.dataset))
+    test_images = torch.load(DATA_FOLDER+'/{d}_data/test_images.pt'.format(d=args.dataset))
+    test_labels = torch.load(DATA_FOLDER+'/{d}_data/test_labels.pt'.format(d=args.dataset))
     test_dataset = torch.utils.data.TensorDataset(test_images, test_labels)
 elif args.dataset == 'covid_ct':
     num_classes = 2
     batch_size = 32
     num_gradual_cdr = 2
-    test_dataset = CovidCTDataset(root_dir='new_data/CT_image',
-                                txt_COVID='new_data/Covid_txt/testCT_COVID.txt',
-                                txt_NonCOVID='new_data/NonCovid_txt/testCT_NonCOVID.txt',
+    test_dataset = CovidCTDataset(root_dir=DATA_FOLDER+'/new_data/CT_image',
+                                txt_COVID=DATA_FOLDER+'/new_data/Covid_txt/testCT_COVID.txt',
+                                txt_NonCOVID=DATA_FOLDER+'/new_data/NonCovid_txt/testCT_NonCOVID.txt',
                                 transform=test_transformer_covid)
 
 noise_train_loader = torch.utils.data.DataLoader(

@@ -1,0 +1,210 @@
+ファイル説明
+
+・実際にプログラムを動かすファイル
+
+・base_line.py
+もととなるファイル
+コマンドライン上でパラメータを指定できる
+パラメータはソースコードを参照してください.
+defaultのepochは400
+*注意事項*
+**
+1.
+Trimming, Trimming_minibatchを用いる場合
+outlier_ratioをdefaultで0.2に設定しているため
+linear,nonlinearでnoise_rateを0.3,0.4で実験を行う場合
+コマンドラインに　--outlier_ratio 0.5を追加
+mnist, covid_ctでnoise_rateを0.4で実験を行う場合
+コマンドラインに　--outlier_ratio 0.4を追加
+2. 
+Trimming_changeでnoise_rate 0.4で実験を行う場合
+ソースコードのTrimming_change内のif,elseで用いれれるargs.outlier_ratioを
+0.01→0.1,0.05→0.2,0.1→0.3,0.2→0.4に変更する必要がある 
+**
+プログラムの流れ
+1. データのロード
+2. データセット, データローダーにする
+3. 各データセットごとに使用するモデルの選択
+4. 学習, 評価, テスト
+5. 結果の保存(numpy)
+
+実行コマンド例
+1. python base_line.py --dataset linear --method CE --noise_type symmetric --noise_rate 0.1
+2. python base_line.py --dataset nonlinear --method CDR --noise_type asymmetric --noise_rate 0.01
+3. python base_line.py --dataset nonlinear --method Trimming --noise_type asymmetric --noise_rate 0.3 --outlier_ratio 0.5
+
+実行結果(一部)
+(REL) oosako@teslaA40Server:~/Graduation-Research$ python base_line.py --dataset linear --method CE --noise_type symmetric --noise_rate 0.1
+epoch 1, train_loss: 0.000501 train_acc: 0.531111 val_loss: 0.004392 val_acc: 0.706667 test_loss: 0.000431 test_acc: 0.770000
+outlier_detection_accuracy: 0.5000
+0.7361006736755371
+epoch 2, train_loss: 0.000485 train_acc: 0.702222 val_loss: 0.004262 val_acc: 0.833333 test_loss: 0.000413 test_acc: 0.966667
+outlier_detection_accuracy: 0.9359
+0.6856896877288818
+epoch 3, train_loss: 0.000470 train_acc: 0.848889 val_loss: 0.004140 val_acc: 0.866667 test_loss: 0.000396 test_acc: 1.000000
+outlier_detection_accuracy: 1.0000
+0.6888518333435059
+
+loss, acc, outlier_detection_accuracy, epochごとの実行時間を表示している
+
+
+・best_acc_loop.py
+データを複数回繰り返すときに利用する.
+実験では, このファイルを使用
+プログラムはbase_line.pyを10回繰り返すもの
+10回それぞれの最もよいoutlier_detection_accuracyと10回分のすべての結果を保存
+base_line.pyと同様の注意が必要
+
+実行コマンド例
+1. python best_acc_loop.py --dataset mnist --method Trimming --noise_type symmetric --noise_rate 0.2
+
+2. python best_acc_loop.py --dataset mnist --method Trimming_change --noise_type asymmetric --noise_rate 0.4 --outlier_ratio 0.4
+
+3. python best_acc_loop.py --dataset covid_ct --method Trimming_minibatch --noise_type instance --noise_rate 0.2
+
+実行結果例(一部)
+(REL) oosako@teslaA40Server:~/Graduation-Research$ python best_acc_loop.py --dataset nonlinear --method Trimming_change --noise_type symmetric --noise_rate 0.1
+outlier: 0.01
+epoch 1, train_loss: 0.00046134 train_acc: 0.458667 test_loss: 0.000449 test_acc: 0.675333
+outlier_detection_accuracy: 0.4103
+0.37761712074279785
+outlier: 0.01
+epoch 2, train_loss: 0.00045016 train_acc: 0.639333 test_loss: 0.000426 test_acc: 0.900667
+outlier_detection_accuracy: 0.7564
+0.39000391960144043
+outlier: 0.01
+epoch 3, train_loss: 0.00043081 train_acc: 0.815333 test_loss: 0.000399 test_acc: 0.766667
+outlier_detection_accuracy: 0.5705
+0.3726992607116699
+
+outlierは取り除く割合
+
+analysis.py
+追加実験で用いたファイル
+symmetric,asymmetricの0.05を以下の3パターンで10回繰り返す
+CE with random inlier
+CE with inlier detected by Trimming
+CE with true inlier
+の3つをflagを用いてコマンドライン上で指定する
+CE with random inlier は CE_R
+CE with inlier detected by Trimming は CE_dbT
+CE with true inlier は CE_T
+
+Trimmingで特定した外れ値のファイル
+best_pred_outlier_nonlinear_Trimming_symmetric_0.05.npy
+best_pred_outlier_nonlinear_Trimming_asymmetric_0.05.npy
+
+実行コマンド例
+1. python analysis.py --dataset nonlinear --method CE --noise_type symmetric --noise_rate 0.05 --flag CE_R 
+2. python analysis.py --dataset nonlinear --method CE --noise_type asymmetric --noise_rate 0.05 --flag CE_dbT
+3. python analysis.py --dataset nonlinear --method CE --noise_type symmetric --noise_rate 0.05 --flag CE_T 
+
+
+・データのダウンロード関連
+
+・Dataset.py
+使用するデータにノイズを加えて保存する
+imagesをtensor, labelsをnumpyで保存している
+
+実行コマンド例
+python Dataset.py --dataset linear --noise_type symmetric --noise_rate 0.1 
+
+datasetにデータセット名, noise_typeにノイズの種類, noise_rateにノイズの割合
+
+・covid_ct_dataset.py
+COVIDデータをtrain, testに振り分けるファイル
+
+・tools.py
+ノイズ加えるための場合分け train,val, train and valノイズあり、ノイズなしに分ける
+
+・utils.py
+ノイズを加える関数のファイル
+
+・noisy_dataset.py
+images, labelsをデータセットにするファイル
+
+・add_noise_split_crust.py
+method　crustのみで使用するデータセットにするファイル
+(crustではあまり実験していないため, 実行できるか不明)
+
+・モデルファイル
+
+・REL_model.py
+linear,nonlinear,mnistで使用するモデルが記述されている
+
+・resnet.py
+crustで使用するモデル
+ディレクトリmodelsも必要
+
+・手法ファイル
+
+・ce_method.py
+cross-entropyのファイル
+
+・cdr_method.py
+CDRのファイル
+
+・crust_method.py
+CRUSTのファイル(実行できるか不明)
+
+・trimming_method.py
+提案手法のファイル
+train_batchがバッチ利用
+train_minibatchがミニバッチ利用
+train_minibatch_covidがcovidのみのミニバッチ利用
+(コードのall_outputsのサイズがcovidで指定しているため)
+
+・eval.py
+loss, accuracyの計算を行うファイル
+
+・eval_on_holdout.py
+eval_on_holdout_dataでvalidation, testのloss, accuracyを求める
+eval_outlier_detectionで, outlier_detection_accuracyを求める
+論文では, R-precision
+
+・結果を表示するファイル
+
+・Latex.py
+結果をLatex形式で表示するファイル
+
+実行コマンド例
+python Latex.py --dataset mnist --noise_type asymmetric
+
+実行結果例
+CE & $ 0.8567 \pm 0.0217 $ & $ 0.8466 \pm 0.0159 $ \\
+CDR & $ 0.8955 \pm 0.0020 $ & $ 0.8354 \pm 0.0051 $ \\
+Trimming & $ 0.0881 \pm 0.0858 $ & $ 0.2519 \pm 0.0131 $ \\
+Trimming_change & $ 0.9115 \pm 0.0008 $ & $ 0.6971 \pm 0.1256 $ \\
+Trimming_minibatch & $ 0.8355 \pm 0.0194 $ & $ 0.7208 \pm 0.1279 $ \\
+
+・boxplot.py 
+追加実験の結果を箱ひげ図にplotするファイル
+
+実行コマンド例
+1. python boxplot.py --dataset nonlinear --noise_type symmetric --noise_rate 0.05
+2. python boxplot.py --dataset nonlinear --noise_type asymmetric --noise_rate 0.05
+
+
+・その他のファイル
+
+・lazyGreedy.py
+・fl_mnist.py
+crustで利用される
+
+
+・フォルダの説明
+
+・all_data_folder
+ノイズを加えたすべてのデータが保存している
+中に,linear_data, nonlinear_data, mnist_data, covid_ct_data, new_dataがある
+new_dataは, COVID_CT画像データセットの元の画像とテキストが含まれる
+
+・*result
+実験結果
+
+・best_acc_*
+最もよい結果
+
+・models 
+crustで使用する
+

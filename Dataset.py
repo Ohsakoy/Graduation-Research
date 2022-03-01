@@ -26,6 +26,7 @@ parser.add_argument('--method', type=str, default='CDR')
 args = parser.parse_args()
 
 #device = torch.device("cpu")
+DATA_FOLDER = 'all_data_folder'
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 transform = transforms.Compose([transforms.ToTensor(),
@@ -103,9 +104,9 @@ elif args.dataset == 'nonlinear':
     y[point] = y[point] & 0
 elif args.dataset == 'covid_ct':
     num_classes = 2
-    train_dataset = CovidCTDataset(root_dir='new_data/CT_image',
-                                txt_COVID='new_data/Covid_txt/train_and_valCT_COVID.txt',
-                                txt_NonCOVID='new_data/NonCovid_txt/train_and_valCT_NonCOVID.txt',
+    train_dataset = CovidCTDataset(root_dir=DATA_FOLDER+'/new_data/CT_image',
+                                txt_COVID=DATA_FOLDER+'/new_data/Covid_txt/train_and_valCT_COVID.txt',
+                                txt_NonCOVID=DATA_FOLDER+'/new_data/NonCovid_txt/train_and_valCT_NonCOVID.txt',
                                 transform=train_transformer_covid)
 
 if args.dataset == 'linear' or args.dataset == 'nonlinear':
@@ -131,17 +132,12 @@ train_loader = torch.utils.data.DataLoader(
 for images, labels in train_loader:
     images_train = images  # .to(device)
     labels_train = labels
-print(images_train.shape)
-print(labels_train.shape)
 
 train_images, val_images, train_labels, val_labels, train_and_val_images, train_and_val_labels, train_and_val_labels_without_noise = tools.dataset_split(
     images_train, labels_train, args.dataset, args.noise_type, args.noise_rate, SPLIT_TRAIN_VAL_RATIO, random_seed=1, num_classes=num_classes)
 
 # plot.save_fig(train_and_val_images, train_and_val_labels,
 #             train_and_val_images, train_and_val_labels_without_noise)
-print(train_and_val_images.shape, train_and_val_labels.shape)
-plot.t_sne(train_and_val_images, train_and_val_labels)
-assert False
 # outlier_id = np.where(train_and_val_labels !=
 #                         train_and_val_labels_without_noise)[0]
 # print(train_and_val_labels.shape)
@@ -149,15 +145,15 @@ assert False
 
 
 #image 保存　tensor
-torch.save(train_images,'{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
+torch.save(train_images,DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
     d=args.dataset,nt=args.noise_type, nr=args.noise_rate))
-torch.save(val_images, '{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
+torch.save(val_images, DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
-torch.save(train_and_val_images, '{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
+torch.save(train_and_val_images, DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
 
 #label 保存 numpy
-np.savez('{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
+np.savez(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
     d=args.dataset, nt=args.noise_type, nr=args.noise_rate), train_labels=train_labels,
     val_labels=val_labels, train_and_val_labels=train_and_val_labels,
     train_and_val_labels_without_noise=train_and_val_labels_without_noise)

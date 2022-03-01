@@ -10,21 +10,14 @@ from sklearn.metrics import pairwise_distances
 import numpy as np
 import time
 from noisy_dataset import NoisyDataset
-from add_noise_split_crust import Noise_dataset_split_crust
 import tools
-from REL_model import LeNet
 from REL_model import NeuralNetwork
 from REL_model import NeuralNetLinear
-from cdr_method import CDR
-from crust_method import CRUST
 from ce_method import CE
 from trimming_method import Trimming
 import eval_on_holdout
 import plot
-from lazyGreedy import lazy_greedy_heap
-from fl_mnist import FacilityLocationMNIST
-import REL_model
-from covid_ct_dataset import CovidCTDataset
+
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--noise_rate', type=float,
@@ -45,12 +38,12 @@ parser.add_argument('--momentum', type=float, help='momentum', default=0.9)
 parser.add_argument('--dataset', type=str, default='mnist')
 parser.add_argument('--method', type=str, default='CDR')
 parser.add_argument('--outlier_ratio', type=float, default=0.2)
-parser.add_argument('--optim', type=str, default='sgd')
+parser.add_argument('--flag', type=str, default='CE_T')
 args = parser.parse_args()
 
-device = torch.device("cpu")
-
-#device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#device = torch.device("cpu")
+DATA_FOLDER = 'all_data_folder'
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.1307, ), (0.3081, )), ])
@@ -75,14 +68,14 @@ test_transformer_covid = transforms.Compose([
 
 best_acc = np.zeros(10)
 for i in range(10):
-    train_images = torch.load('{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
+    train_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_images.pt'.format(
         d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
-    val_images = torch.load('{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
+    val_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_val_images.pt'.format(
         d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
-    train_and_val_images = torch.load('{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
+    train_and_val_images = torch.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_train_and_val_images.pt'.format(
         d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
 
-    labels = np.load('{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
+    labels = np.load(DATA_FOLDER+'/{d}_data/{d}_{nt}_{nr}_labels.npz'.format(
         d=args.dataset, nt=args.noise_type, nr=args.noise_rate))
     train_labels = labels['train_labels']
     val_labels = labels['val_labels']
@@ -101,8 +94,8 @@ for i in range(10):
         num_classes = 2
         num_gradual_cdr = 2
         batch_size = len(noise_train_dataset)
-        test_images = torch.load('{d}_data/test_images.pt'.format(d=args.dataset))
-        test_labels = torch.load('{d}_data/test_labels.pt'.format(d=args.dataset))
+        test_images = torch.load(DATA_FOLDER+'/{d}_data/test_images.pt'.format(d=args.dataset))
+        test_labels = torch.load(DATA_FOLDER+'/{d}_data/test_labels.pt'.format(d=args.dataset))
         test_dataset = torch.utils.data.TensorDataset(test_images, test_labels)
 
     noise_train_loader = torch.utils.data.DataLoader(
@@ -114,24 +107,20 @@ for i in range(10):
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=len(test_dataset))
 
-    # load = np.load('best_pred_outlier_{d}_Trimming_{nt}_{nr}.npy'.format(d=args.dataset, 
-    #                                                 nt=args.noise_type, nr=args.noise_rate))
-    # pred_outliers = load.astype(np.int)
-    # new_images = np.delete(train_and_val_images, pred_outliers, axis=0)
-    # new_labels = np.delete(train_and_val_labels, pred_outliers, axis=0)
-
-    # new_dataset = NoisyDataset(
-    #     new_images, new_labels, target_transform=tools.transform_target)
-    # new_loader = torch.utils.data.DataLoader(
-    #     new_dataset, batch_size=len(new_dataset), drop_last=False, shuffle=True, num_workers=args.workers, pin_memory=True)
-
-    n = len(train_and_val_labels) * args.noise_rate
-    outliers = np.random.choice(len(train_and_val_labels) ,int(n),replace=False)
+    if args.flag == 'CE_dbT':
+        load = np.load('best_pred_outlier_{d}_Trimming_{nt}_{nr}.npy'.format(d=args.dataset, 
+                                                    nt=args.noise_type, nr=args.noise_rate))
+        outliers = load.astype(np.int)
+    elif args.flag == 'CE_R':
+        n = len(train_and_val_labels) * args.noise_rate
+        outliers = np.random.choice(len(train_and_val_labels) ,int(n),replace=False)
+    elif args.flag == 'CE_T':
+        outliers = np.where(train_and_val_labels !=
+                        train_and_val_labels_without_noise)[0]
+    
     new_images = np.delete(train_and_val_images, outliers, axis=0)
     new_labels = np.delete(train_and_val_labels, outliers, axis=0)
     
-    plot.save_fig(train_and_val_images, train_and_val_labels, new_images,new_labels)
-    print(new_images.shape, new_labels.shape)
     #assert False
 
     new_dataset = NoisyDataset(

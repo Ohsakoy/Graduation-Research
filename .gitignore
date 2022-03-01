@@ -4,16 +4,10 @@ linear_result
 nonlinear_result
 covid_ct_result
 models
-output
 __pycache__
-data
 .vscode
 best_acc_linear
 best_acc_nonlinear
 best_acc_covid_ct
 best_acc_mnist
-new_data
-covid_ct_data
-mnist_data
-linear_data
-nonlinear_data
+all_data_folder
