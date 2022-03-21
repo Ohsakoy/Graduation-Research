@@ -1,13 +1,1 @@
-MNIST
-mnist_result
-linear_result
-nonlinear_result
-covid_ct_result
-models
-__pycache__
 .vscode
-best_acc_linear
-best_acc_nonlinear
-best_acc_covid_ct
-best_acc_mnist
-all_data_folder
